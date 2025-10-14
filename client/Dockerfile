@@ -1,12 +1,13 @@
-# Stage 1: Build app
-FROM node:20-alpine AS build
+# Sử dụng Node.js official image (nhẹ hơn và ổn định hơn)
+FROM node:18-alpine
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve static files with Nginx
+# Production stage
 FROM nginx:stable-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80

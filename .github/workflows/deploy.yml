@@ -1,4 +1,4 @@
-name: DevOps Day3 CI/CD
+name: DOANNEST-MAIN
 
 on:
   push:
@@ -33,8 +33,28 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            phuonglam2507/devops-day3:latest
-            phuonglam2507/devops-day3:${{ github.sha }}
+            phuonglam2507/
+            phuonglam2507/giutarshop:latest
+            phuonglam2507/
+            phuonglam2507/giutarshop:${{ github.sha }}
             
       - name: Verify
         run: echo "Image digest:" ${{ steps.docker_build.outputs.digest }}
+      - name: 🚀 Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🧹 Pulling latest image..."
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/giutarshop:latest
+
+            echo "🧨 Stopping old container..."
+            docker stop giutarshop || true
+            docker rm giutarshop || true
+
+            echo "🚀 Running new container..."
+            docker run -d --name giutarshop -p 80:3000 ${{ secrets.DOCKERHUB_USERNAME }}/giutarshop:latest
+
+            echo "✅ Deployment successful!"
