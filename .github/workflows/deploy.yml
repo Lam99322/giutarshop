@@ -22,15 +22,21 @@ jobs:
          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
           
 
-      # 3️⃣ Build Docker image
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/guitarshop:latest .
-
-      # 4️⃣ Push image lên Docker Hub
-      - name: Push Docker image
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/guitarshop:latest
+      - name: Build and push Docker image
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            phuonglam2507/giutarshop:latest
+            phuonglam2507/giutarshop:${{ github.sha }}
+            
+      - name: Verify
+        run: echo "Image digest:" ${{ steps.docker_build.outputs.digest }}
 
       # 5️⃣ Deploy lên EC2 qua SSH
       - name: Deploy to EC2
