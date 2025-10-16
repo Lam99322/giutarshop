@@ -1,21 +1,20 @@
-FROM node:20-alpine AS builder
+# Stage 1: Base image
+FROM node:20-alpine
 
+# Thiết lập thư mục làm việc
 WORKDIR /app
 
+# Copy file package.json và package-lock.json (nếu có)
 COPY package*.json ./
 
+# Cài dependencies
 RUN npm install
 
+# Copy toàn bộ mã nguồn
 COPY . .
 
-# Chỉ copy node_modules và dist sang stage runner
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-
+# Expose cổng server
 EXPOSE 5000
 
-CMD ["node", "dist/index.js"]
+# Lệnh khởi chạy ứng dụng
+CMD ["npm", "start"]
