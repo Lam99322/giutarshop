@@ -1,5 +1,15 @@
-FROM openjdk:17-jdk-slim
+# ----------------------
+# Backend Dockerfile
+# ----------------------
+FROM node:18-alpine
+
 WORKDIR /app
-COPY target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+COPY package*.json ./
+RUN npm install --only=production
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["npm", "start"]
