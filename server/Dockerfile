@@ -1,20 +1,32 @@
-# --- Backend Dockerfile (server/Dockerfile) ---
+# Stage 1: Build the React app using Vite
+FROM node:18-alpine AS build
 
-FROM node:20-alpine
-
+# Set working directory
 WORKDIR /app
 
-# Copy package files trước để cache layer npm install
+# Copy dependencies files first (to leverage caching)
 COPY package*.json ./
 
-# Cài dependencies
+# Install dependencies
 RUN npm install
 
-# Copy toàn bộ source code
+# Copy all source files
 COPY . .
 
-# Expose port backend (ví dụ 5000)
-EXPOSE 5000
+# Build the app
+RUN npm run build
 
-# Chạy server (dùng ts-node)
-CMD ["npm", "start"]
+# Stage 2: Serve the app using Nginx
+FROM nginx:alpine
+
+# Copy the build output to Nginx's default public directory
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy custom nginx config if needed (optional)
+# COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
