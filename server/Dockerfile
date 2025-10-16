@@ -8,9 +8,6 @@ RUN npm install
 
 COPY . .
 
-# Build TypeScript ra dist
-RUN npm run build   # <-- quan trọng
-
 # Chỉ copy node_modules và dist sang stage runner
 FROM node:20-alpine AS runner
 
