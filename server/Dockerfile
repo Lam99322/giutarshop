@@ -1,22 +1,20 @@
-# --- Backend Dockerfile (server/Dockerfile) ---
+# Sử dụng image Node.js nhẹ
+FROM node:18-alpine
 
-# Sử dụng Node 20 (nhẹ, hiện đại)
-FROM node:20-alpine
-
-# Thiết lập thư mục làm việc
+# Set thư mục làm việc trong container
 WORKDIR /app
 
-# Copy file package.json và package-lock.json
+# Copy file package.json và package-lock.json trước
 COPY package*.json ./
 
 # Cài đặt dependencies
 RUN npm install
 
-# Copy toàn bộ source code
+# Copy toàn bộ mã nguồn vào container
 COPY . .
 
-# Mở cổng 5000 (backend)
+# Mở port server (5000 theo ảnh bạn gửi)
 EXPOSE 5000
 
-# Lệnh khởi chạy server
+# Lệnh khởi động
 CMD ["npm", "start"]
