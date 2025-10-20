@@ -17,8 +17,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh '''
-                docker build -t $DOCKERHUB_USER/guitarshop-frontend ./client
-                docker build -t $DOCKERHUB_USER/guitarshop-backend ./server
+                docker build -t $DOCKERHUB_USER/giutarshop-frontend ./client
+                docker build -t $DOCKERHUB_USER/giutarshop-backend ./server
                 '''
             }
         }
@@ -28,8 +28,8 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
                     echo $PASS | docker login -u $USER --password-stdin
-                    docker push $DOCKERHUB_USER/guitarshop-frontend
-                    docker push $DOCKERHUB_USER/guitarshop-backend
+                    docker push $DOCKERHUB_USER/giutarshop-frontend
+                    docker push $DOCKERHUB_USER/giutarshop-backend
                     '''
                 }
             }
