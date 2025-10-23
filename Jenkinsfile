@@ -71,9 +71,7 @@ pipeline {
         }
         always {
             echo '🧹 Cleaning workspace...'
-            node {
-                cleanWs()
-            }
+            cleanWs()  // ✅ KHÔNG cần node {}
         }
     }
 }
