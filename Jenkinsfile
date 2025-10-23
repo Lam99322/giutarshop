@@ -5,7 +5,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-cred')
         GITHUB_CREDENTIALS = credentials('github-creds')
         DOCKERHUB_USER = 'phuonglam2507'
-        VPS_IP = '13.211.214.166'  // 👉 thay bằng IP thật của VPS
+        VPS_IP = '13.211.214.166'  // Địa chỉ VPS thật
     }
 
     stages {
@@ -29,7 +29,6 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 echo '⬆️ Pushing images to DockerHub...'
-
                 timeout(time: 10, unit: 'MINUTES') {
                     sh '''
                     echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
@@ -47,11 +46,14 @@ pipeline {
                 sshagent(['vps-ssh']) {
                     sh '''
                     ssh -o StrictHostKeyChecking=no ubuntu@$VPS_IP "
+                        set -e
                         cd ~/giutarshop &&
                         echo '📥 Pulling latest code from GitHub...' &&
                         git pull origin main &&
-                        echo '🧹 Rebuilding containers...' &&
+                        echo '🧹 Cleaning old Docker cache...' &&
                         docker-compose down &&
+                        docker system prune -af &&
+                        echo '🚀 Rebuilding containers...' &&
                         docker-compose up -d --build
                     "
                     '''
@@ -67,10 +69,11 @@ pipeline {
         failure {
             echo '❌ CI/CD Pipeline failed! Please check logs for more details.'
         }
-
-        // 🧽 Luôn dọn dẹp workspace sau mỗi build (ngăn lỗi missing workspace)
         always {
-            cleanWs()
+            echo '🧹 Cleaning workspace...'
+            node {
+                cleanWs()
+            }
         }
     }
 }
