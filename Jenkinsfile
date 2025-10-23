@@ -29,6 +29,7 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 echo '⬆️ Pushing images to DockerHub...'
+
                 timeout(time: 10, unit: 'MINUTES') {
                     sh '''
                     echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
@@ -65,6 +66,11 @@ pipeline {
         }
         failure {
             echo '❌ CI/CD Pipeline failed! Please check logs for more details.'
+        }
+
+        // 🧽 Luôn dọn dẹp workspace sau mỗi build (ngăn lỗi missing workspace)
+        always {
+            cleanWs()
         }
     }
 }
