@@ -1,5 +1,5 @@
 # Sử dụng image Node.js nhẹ
-FROM node:18-alpine
+FROM node:18-slim
 
 # Set thư mục làm việc trong container
 WORKDIR /app
