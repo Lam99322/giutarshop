@@ -29,9 +29,9 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 echo '⬆️ Pushing images to DockerHub...'
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                timeout(time: 10, unit: 'MINUTES') {
                     sh '''
-                    echo $PASS | docker login -u $USER --password-stdin
+                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
                     docker push $DOCKERHUB_USER/giutarshop-frontend
                     docker push $DOCKERHUB_USER/giutarshop-backend
                     docker logout
