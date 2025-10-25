@@ -6,14 +6,16 @@ pipeline {
         GITHUB_CREDENTIALS = credentials('github-creds')
         VPS_SSH = 'vps-ssh' // ID SSH key đã lưu trong Jenkins credentials
         DOCKERHUB_USER = 'phuonglam2507'
-        VPS_IP = '13.211.214.166'  // Địa chỉ VPS
+        VPS_IP = '13.211.214.166'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 echo '📦 Cloning source code from GitHub...'
-                git branch: 'main', url: 'https://github.com/Lam99322/giutarshop.git', credentialsId: "${GITHUB_CREDENTIALS}"
+                git branch: 'main',
+                    url: 'https://github.com/Lam99322/giutarshop.git',
+                    credentialsId: "${GITHUB_CREDENTIALS}"
             }
         }
 
@@ -30,9 +32,9 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 echo '⬆️ Pushing images to DockerHub...'
-                timeout(time: 10, unit: 'MINUTES') {
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKERHUB_USER_NAME', passwordVariable: 'DOCKERHUB_PASS')]) {
                     sh '''
-                        echo "${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
+                        echo "${DOCKERHUB_PASS}" | docker login -u "${DOCKERHUB_USER_NAME}" --password-stdin
                         docker push ${DOCKERHUB_USER}/giutarshop-frontend
                         docker push ${DOCKERHUB_USER}/giutarshop-backend
                         docker logout
@@ -45,22 +47,22 @@ pipeline {
             steps {
                 echo '🚀 Deploying application on VPS...'
                 sshagent([VPS_SSH]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} "
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} '
                             set -e
+                            echo "📥 Pulling latest code from GitHub..."
                             cd ~/giutarshop || exit 1
-                            echo '📥 Pulling latest code from GitHub...'
                             git pull origin main
-                            echo '🧹 Stopping and cleaning old containers...'
+                            echo "🧹 Cleaning old containers..."
                             docker-compose down || true
                             docker system prune -af
-                            echo '🚀 Pulling latest images from DockerHub...'
+                            echo "🚀 Pulling latest images from DockerHub..."
                             docker pull ${DOCKERHUB_USER}/giutarshop-frontend
                             docker pull ${DOCKERHUB_USER}/giutarshop-backend
-                            echo '🌍 Rebuilding and starting containers...'
+                            echo "🌍 Rebuilding containers..."
                             docker-compose up -d
-                        "
-                    '''
+                        '
+                    """
                 }
             }
         }
@@ -75,7 +77,12 @@ pipeline {
         }
         always {
             echo '🧹 Cleaning workspace...'
-            cleanWs()
+            script {
+                // Bọc cleanWs() trong node để tránh lỗi MissingContextVariableException
+                node {
+                    cleanWs()
+                }
+            }
         }
     }
 }
