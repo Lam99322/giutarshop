@@ -2,9 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-cred')
-        GITHUB_CREDENTIALS = credentials('github-creds')
-        VPS_SSH = 'vps-ssh' // ID SSH key đã lưu trong Jenkins credentials
         DOCKERHUB_USER = 'phuonglam2507'
         VPS_IP = '13.211.214.166'
     }
@@ -15,7 +12,7 @@ pipeline {
                 echo '📦 Cloning source code from GitHub...'
                 git branch: 'main',
                     url: 'https://github.com/Lam99322/giutarshop.git',
-                    credentialsId: "${GITHUB_CREDENTIALS}"
+                    credentialsId: 'github-creds'
             }
         }
 
@@ -32,7 +29,7 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 echo '⬆️ Pushing images to DockerHub...'
-                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKERHUB_USER_NAME', passwordVariable: 'DOCKERHUB_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKERHUB_USER_NAME', passwordVariable: 'DOCKERHUB_PASS')]) {
                     sh '''
                         echo "${DOCKERHUB_PASS}" | docker login -u "${DOCKERHUB_USER_NAME}" --password-stdin
                         docker push ${DOCKERHUB_USER}/giutarshop-frontend
@@ -46,7 +43,7 @@ pipeline {
         stage('Deploy to VPS') {
             steps {
                 echo '🚀 Deploying application on VPS...'
-                sshagent([VPS_SSH]) {
+                sshagent(['vps-ssh']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} '
                             set -e
@@ -78,7 +75,6 @@ pipeline {
         always {
             echo '🧹 Cleaning workspace...'
             script {
-                // Bọc cleanWs() trong node để tránh lỗi MissingContextVariableException
                 node {
                     cleanWs()
                 }
