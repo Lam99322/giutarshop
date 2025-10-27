@@ -43,9 +43,9 @@ pipeline {
         stage('Deploy to VPS') {
             steps {
                 echo '🚀 Deploying application to VPS...'
-                sshagent(['vps-ssh']) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh', keyFileVariable: 'SSH_KEY')]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
+                        ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
                         set -e
                         echo "📥 Pulling latest code..."
                         if [ ! -d ~/giutarshop ]; then
@@ -55,7 +55,7 @@ pipeline {
                         git pull origin main
 
                         echo "🧹 Cleaning old containers and networks..."
-                        docker-compose down || true
+                        docker compose down || true
                         docker system prune -af || true
 
                         echo "⬇️ Pulling latest Docker images..."
@@ -63,7 +63,7 @@ pipeline {
                         docker pull ${DOCKERHUB_USER}/giutarshop-frontend
 
                         echo "🚀 Starting containers..."
-                        docker-compose up -d
+                        docker compose up -d
 
                         echo "✅ Deployment completed successfully!"
                         docker ps -a
