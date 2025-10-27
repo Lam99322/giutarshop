@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_USER = 'phuonglam2507'
         VPS_IP = '13.211.214.166'
+        REPO_URL = 'https://github.com/Lam99322/giutarshop.git'
     }
 
     stages {
@@ -11,7 +12,7 @@ pipeline {
             steps {
                 echo '📦 Cloning source code from GitHub...'
                 git branch: 'main',
-                    url: 'https://github.com/Lam99322/giutarshop.git',
+                    url: "${REPO_URL}",
                     credentialsId: 'github-creds'
             }
         }
@@ -44,31 +45,29 @@ pipeline {
             steps {
                 echo '🚀 Deploying application to VPS...'
                 withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh', keyFileVariable: 'SSH_KEY')]) {
-                    sh """
+                    sh '''
                         ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
                         set -e
                         echo "📥 Pulling latest code..."
                         if [ ! -d ~/giutarshop ]; then
-                            git clone https://github.com/Lam99322/giutarshop.git ~/giutarshop
+                            git clone ${REPO_URL} ~/giutarshop
                         fi
                         cd ~/giutarshop
                         git pull origin main
 
-                        echo "🧹 Cleaning old containers and networks..."
+                        echo "🧹 Cleaning old containers..."
                         docker compose down || true
                         docker system prune -af || true
 
-                        echo "⬇️ Pulling latest Docker images..."
+                        echo "⬇️ Pulling new images..."
                         docker pull ${DOCKERHUB_USER}/giutarshop-backend
                         docker pull ${DOCKERHUB_USER}/giutarshop-frontend
 
                         echo "🚀 Starting containers..."
                         docker compose up -d
-
-                        echo "✅ Deployment completed successfully!"
                         docker ps -a
                         EOF
-                    """
+                    '''
                 }
             }
         }
@@ -76,10 +75,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ CI/CD Pipeline completed successfully! Application deployed on VPS.'
+            echo '✅ CI/CD Pipeline completed successfully!'
         }
         failure {
-            echo '❌ CI/CD Pipeline failed! Please check the logs for details.'
+            echo '❌ CI/CD Pipeline failed! Please check the logs.'
         }
         always {
             echo '🧹 Cleaning Jenkins workspace...'
@@ -87,3 +86,4 @@ pipeline {
         }
     }
 }
+
