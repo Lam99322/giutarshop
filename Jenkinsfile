@@ -20,8 +20,8 @@ pipeline {
             steps {
                 echo '🐳 Building Docker images...'
                 sh '''
-                    docker build -t ${DOCKERHUB_USER}/giutarshop-frontend ./client
                     docker build -t ${DOCKERHUB_USER}/giutarshop-backend ./server
+                    docker build -t ${DOCKERHUB_USER}/giutarshop-frontend ./client
                 '''
             }
         }
@@ -29,11 +29,11 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 echo '⬆️ Pushing images to DockerHub...'
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKERHUB_USER_NAME', passwordVariable: 'DOCKERHUB_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
-                        echo "${DOCKERHUB_PASS}" | docker login -u "${DOCKERHUB_USER_NAME}" --password-stdin
-                        docker push ${DOCKERHUB_USER}/giutarshop-frontend
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKERHUB_USER}/giutarshop-backend
+                        docker push ${DOCKERHUB_USER}/giutarshop-frontend
                         docker logout
                     '''
                 }
@@ -42,23 +42,32 @@ pipeline {
 
         stage('Deploy to VPS') {
             steps {
-                echo '🚀 Deploying application on VPS...'
+                echo '🚀 Deploying application to VPS...'
                 sshagent(['vps-ssh']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} '
-                            set -e
-                            echo "📥 Pulling latest code from GitHub..."
-                            cd ~/giutarshop || exit 1
-                            git pull origin main
-                            echo "🧹 Cleaning old containers..."
-                            docker-compose down || true
-                            docker system prune -af
-                            echo "🚀 Pulling latest images from DockerHub..."
-                            docker pull ${DOCKERHUB_USER}/giutarshop-frontend
-                            docker pull ${DOCKERHUB_USER}/giutarshop-backend
-                            echo "🌍 Rebuilding containers..."
-                            docker-compose up -d
-                        '
+                        ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
+                        set -e
+                        echo "📥 Pulling latest code..."
+                        if [ ! -d ~/giutarshop ]; then
+                            git clone https://github.com/Lam99322/giutarshop.git ~/giutarshop
+                        fi
+                        cd ~/giutarshop
+                        git pull origin main
+
+                        echo "🧹 Cleaning old containers and networks..."
+                        docker-compose down || true
+                        docker system prune -af || true
+
+                        echo "⬇️ Pulling latest Docker images..."
+                        docker pull ${DOCKERHUB_USER}/giutarshop-backend
+                        docker pull ${DOCKERHUB_USER}/giutarshop-frontend
+
+                        echo "🚀 Starting containers..."
+                        docker-compose up -d
+
+                        echo "✅ Deployment completed successfully!"
+                        docker ps -a
+                        EOF
                     """
                 }
             }
@@ -70,15 +79,11 @@ pipeline {
             echo '✅ CI/CD Pipeline completed successfully! Application deployed on VPS.'
         }
         failure {
-            echo '❌ CI/CD Pipeline failed! Please check logs for details.'
+            echo '❌ CI/CD Pipeline failed! Please check the logs for details.'
         }
         always {
-            echo '🧹 Cleaning workspace...'
-            script {
-                node {
-                    cleanWs()
-                }
-            }
+            echo '🧹 Cleaning Jenkins workspace...'
+            cleanWs()
         }
     }
 }
