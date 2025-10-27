@@ -46,26 +46,32 @@ pipeline {
                 echo '🚀 Deploying application to VPS...'
                 withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh', keyFileVariable: 'SSH_KEY')]) {
                     sh '''
+                        echo "🔐 Setting SSH key permission..."
+                        chmod 600 $SSH_KEY
+
+                        echo "📡 Connecting to VPS and deploying..."
                         ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
-                        set -e
-                        echo "📥 Pulling latest code..."
-                        if [ ! -d ~/giutarshop ]; then
-                            git clone ${REPO_URL} ~/giutarshop
-                        fi
-                        cd ~/giutarshop
-                        git pull origin main
+                            set -e
+                            echo "📥 Pulling latest code..."
+                            if [ ! -d ~/giutarshop ]; then
+                                git clone https://github.com/Lam99322/giutarshop.git ~/giutarshop
+                            fi
+                            cd ~/giutarshop
+                            git pull origin main
 
-                        echo "🧹 Cleaning old containers..."
-                        docker compose down || true
-                        docker system prune -af || true
+                            echo "🧹 Cleaning old containers..."
+                            docker compose down || true
+                            docker system prune -af || true
 
-                        echo "⬇️ Pulling new images..."
-                        docker pull ${DOCKERHUB_USER}/giutarshop-backend
-                        docker pull ${DOCKERHUB_USER}/giutarshop-frontend
+                            echo "⬇️ Pulling latest Docker images..."
+                            docker pull ${DOCKERHUB_USER}/giutarshop-backend
+                            docker pull ${DOCKERHUB_USER}/giutarshop-frontend
 
-                        echo "🚀 Starting containers..."
-                        docker compose up -d
-                        docker ps -a
+                            echo "🚀 Starting containers..."
+                            docker compose up -d --remove-orphans
+
+                            echo "✅ Deployment completed successfully!"
+                            docker ps -a
                         EOF
                     '''
                 }
@@ -75,10 +81,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ CI/CD Pipeline completed successfully!'
+            echo '✅ CI/CD Pipeline completed successfully! Application deployed on VPS.'
         }
         failure {
-            echo '❌ CI/CD Pipeline failed! Please check the logs.'
+            echo '❌ CI/CD Pipeline failed! Please check the logs for details.'
         }
         always {
             echo '🧹 Cleaning Jenkins workspace...'
@@ -86,4 +92,3 @@ pipeline {
         }
     }
 }
-
