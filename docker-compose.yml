@@ -2,32 +2,28 @@ version: "3.9"
 
 services:
   backend:
-    build: ./server
+    image: phuonglam2507/giutarshop-backend:latest
     container_name: backend
     ports:
       - "5000:5000"
-    volumes:
-      - ./server:/app
-      - /app/node_modules
     command: npm start
     env_file:
-      - ./server/.env.development
+      - ./server/.env.production   # bạn có thể đổi lại nếu dùng .env khác
     networks:
       - app-network
+    restart: always
 
   frontend:
-    build: ./client
+    image: phuonglam2507/giutarshop-frontend:latest
     container_name: frontend
     ports:
-      - "5173:5173"
-    volumes:
-      - ./client:/app
-      - /app/node_modules
-    command: npm run dev -- --host
+      - "80:80"   # đổi từ 5173 -> 80 để truy cập ngoài internet dễ hơn
+    command: npm run start          # chạy bản build production
     depends_on:
       - backend
     networks:
       - app-network
+    restart: always
 
 networks:
   app-network:
