@@ -30,7 +30,11 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 echo '⬆️ Pushing images to DockerHub...'
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-cred',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKERHUB_USER}/giutarshop-backend
@@ -45,9 +49,9 @@ pipeline {
             steps {
                 echo '🚀 Deploying application to VPS...'
                 script {
-                    sshagent(['vps-ssh']) { // 'vps-ssh' = ID của SSH key trong Jenkins
+                    sshagent(credentials: ['vps-ssh']) { // ID của SSH key đã add trong Jenkins
                         sh """
-                            ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
+                            ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << EOF
                                 set -e
                                 echo "📥 Pulling latest code..."
                                 if [ ! -d ~/giutarshop ]; then
