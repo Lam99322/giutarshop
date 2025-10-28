@@ -44,36 +44,34 @@ pipeline {
         stage('Deploy to VPS') {
             steps {
                 echo '🚀 Deploying application to VPS...'
-                withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh', keyFileVariable: 'SSH_KEY')]) {
-                    sh '''
-                        echo "🔐 Setting SSH key permission..."
-                        chmod 600 $SSH_KEY
+                script {
+                    sshagent(['vps-ssh']) { // 'vps-ssh' = ID của SSH key trong Jenkins
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
+                                set -e
+                                echo "📥 Pulling latest code..."
+                                if [ ! -d ~/giutarshop ]; then
+                                    git clone ${REPO_URL} ~/giutarshop
+                                fi
+                                cd ~/giutarshop
+                                git pull origin main
 
-                        echo "📡 Connecting to VPS and deploying..."
-                        ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
-                            set -e
-                            echo "📥 Pulling latest code..."
-                            if [ ! -d ~/giutarshop ]; then
-                                git clone https://github.com/Lam99322/giutarshop.git ~/giutarshop
-                            fi
-                            cd ~/giutarshop
-                            git pull origin main
+                                echo "🧹 Cleaning old containers..."
+                                docker compose down || true
+                                docker system prune -af || true
 
-                            echo "🧹 Cleaning old containers..."
-                            docker compose down || true
-                            docker system prune -af || true
+                                echo "⬇️ Pulling latest Docker images..."
+                                docker pull ${DOCKERHUB_USER}/giutarshop-backend
+                                docker pull ${DOCKERHUB_USER}/giutarshop-frontend
 
-                            echo "⬇️ Pulling latest Docker images..."
-                            docker pull ${DOCKERHUB_USER}/giutarshop-backend
-                            docker pull ${DOCKERHUB_USER}/giutarshop-frontend
+                                echo "🚀 Starting containers..."
+                                docker compose up -d --remove-orphans
 
-                            echo "🚀 Starting containers..."
-                            docker compose up -d --remove-orphans
-
-                            echo "✅ Deployment completed successfully!"
-                            docker ps -a
-                        EOF
-                    '''
+                                echo "✅ Deployment completed successfully!"
+                                docker ps -a
+                            EOF
+                        """
+                    }
                 }
             }
         }
