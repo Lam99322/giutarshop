@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_USER = 'phuonglam2507'
         VPS_IP = '13.211.214.166'
-        REPO_URL = 'https://github.com/Lam99322/giutarshop.git'
+        REPO_URL = 'git@github.com:Lam99322/giutarshop.git'
     }
 
     stages {
@@ -13,7 +13,7 @@ pipeline {
                 echo '📦 Cloning source code from GitHub...'
                 git branch: 'main',
                     url: "${REPO_URL}",
-                    credentialsId: 'github-creds'
+                    credentialsId: 'github-ssh'
             }
         }
 
@@ -45,13 +45,26 @@ pipeline {
             }
         }
 
+        stage('Test SSH Connection') {
+            steps {
+                echo '🧪 Testing SSH connection to VPS...'
+                script {
+                    sshagent(credentials: ['vps-ssh']) {
+                        sh """
+                            ssh -o BatchMode=yes -o StrictHostKeyChecking=no ubuntu@${VPS_IP} 'echo "✅ SSH connection successful!"'
+                        """
+                    }
+                }
+            }
+        }
+
         stage('Deploy to VPS') {
             steps {
                 echo '🚀 Deploying application to VPS...'
                 script {
-                    sshagent(credentials: ['vps-ssh']) { // ID của SSH key đã add trong Jenkins
+                    sshagent(credentials: ['vps-ssh']) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << EOF
+                            ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
                                 set -e
                                 echo "📥 Pulling latest code..."
                                 if [ ! -d ~/giutarshop ]; then
