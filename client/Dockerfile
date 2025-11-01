@@ -1,15 +1,21 @@
-FROM node:18-alpine
+# Stage 1: build
+FROM node:18-slim AS builder
 WORKDIR /app
 
-# Copy package.json và cài dependencies
+# Copy package.json + package-lock.json
 COPY package*.json ./
+
+# Cài đặt dependencies
 RUN npm install
 
-# Copy toàn bộ source code
+# Copy source code
 COPY . .
 
-# Expose port Vite mặc định
-EXPOSE 5173
+# Build project
+RUN npm run build
 
-# Chạy dev server
-CMD ["npm", "run", "dev", "--", "--host"]
+# Stage 2: serve static files
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
