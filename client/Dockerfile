@@ -1,13 +1,15 @@
-# Build stage
-FROM node:18 AS builder
+FROM node:18-alpine
 WORKDIR /app
+
+# Copy package.json và cài dependencies
 COPY package*.json ./
 RUN npm install
-COPY . .
-RUN npm run build
 
-# Serve stage
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Copy toàn bộ source code
+COPY . .
+
+# Expose port Vite mặc định
+EXPOSE 5173
+
+# Chạy dev server
+CMD ["npm", "run", "dev", "--", "--host"]
