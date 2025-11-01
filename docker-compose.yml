@@ -4,26 +4,21 @@ services:
   backend:
     build: ./server
     container_name: backend
+    restart: always
     ports:
       - "5000:5000"
-    volumes:
-      - ./server:/app
-      - /app/node_modules
-    command: npm start
     env_file:
       - ./server/.env.production
+    command: npm start
     networks:
       - app-network
 
   frontend:
     build: ./client
     container_name: frontend
+    restart: always
     ports:
-      - "80:5173"   # ⚠️ Deploy VPS dùng port 80 để public
-    volumes:
-      - ./client:/app
-      - /app/node_modules
-    command: npm run dev -- --host
+      - "80:80"
     depends_on:
       - backend
     networks:
