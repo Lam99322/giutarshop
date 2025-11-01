@@ -2,108 +2,56 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'phuonglam2507'
-        VPS_IP = '13.211.214.166'
-        REPO_URL = 'git@github.com:Lam99322/giutarshop.git'
+        DOCKERHUB_USER = 'phuonglam2507'       // 👉 Tên tài khoản Docker Hub của bạn
+        DOCKERHUB_REPO = 'giutarshop'           // 👉 Tên repo Docker của bạn
     }
 
     stages {
         stage('Checkout') {
             steps {
                 echo '📦 Cloning source code from GitHub...'
-                git branch: 'main',
-                    url: "${REPO_URL}",
-                    credentialsId: 'github-ssh'
+                git branch: 'main', url: 'git@github.com:Lam99322/giutarshop.git'
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build Docker Image') {
             steps {
-                echo '🐳 Building Docker images...'
+                echo '🐳 Building Docker image...'
                 sh '''
-                    docker build -t ${DOCKERHUB_USER}/giutarshop-backend ./server
-                    docker build -t ${DOCKERHUB_USER}/giutarshop-frontend ./client
+                    docker build -t $DOCKERHUB_USER/$DOCKERHUB_REPO:latest .
                 '''
             }
         }
 
-        stage('Push Docker Images') {
+        stage('Push to DockerHub') {
             steps {
-                echo '⬆️ Pushing images to DockerHub...'
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-cred',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKERHUB_USER}/giutarshop-backend
-                        docker push ${DOCKERHUB_USER}/giutarshop-frontend
-                        docker logout
+                        echo "$PASS" | docker login -u "$USER" --password-stdin
+                        docker push $DOCKERHUB_USER/$DOCKERHUB_REPO:latest
                     '''
                 }
             }
         }
 
-        stage('Test SSH Connection') {
+        stage('Deploy with Docker Compose') {
             steps {
-                echo '🧪 Testing SSH connection to VPS...'
-                script {
-                    sshagent(credentials: ['vps-ssh']) {
-                        sh """
-                            ssh -o BatchMode=yes -o StrictHostKeyChecking=no ubuntu@${VPS_IP} 'echo "✅ SSH connection successful!"'
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Deploy to VPS') {
-            steps {
-                echo '🚀 Deploying application to VPS...'
-                script {
-                    sshagent(credentials: ['vps-ssh']) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << 'EOF'
-                                set -e
-                                echo "📥 Pulling latest code..."
-                                if [ ! -d ~/giutarshop ]; then
-                                    git clone ${REPO_URL} ~/giutarshop
-                                fi
-                                cd ~/giutarshop
-                                git pull origin main
-
-                                echo "🧹 Cleaning old containers..."
-                                docker compose down || true
-                                docker system prune -af || true
-
-                                echo "⬇️ Pulling latest Docker images..."
-                                docker pull ${DOCKERHUB_USER}/giutarshop-backend
-                                docker pull ${DOCKERHUB_USER}/giutarshop-frontend
-
-                                echo "🚀 Starting containers..."
-                                docker compose up -d --remove-orphans
-
-                                echo "✅ Deployment completed successfully!"
-                                docker ps -a
-                            EOF
-                        """
-                    }
-                }
+                echo '🚀 Deploying application on Jenkins server...'
+                sh '''
+                    docker-compose down || true
+                    docker-compose up -d --build
+                    docker image prune -f
+                '''
             }
         }
     }
 
     post {
         success {
-            echo '✅ CI/CD Pipeline completed successfully! Application deployed on VPS.'
+            echo '✅ Deployment completed successfully!'
         }
         failure {
-            echo '❌ CI/CD Pipeline failed! Please check the logs for details.'
-        }
-        always {
-            echo '🧹 Cleaning Jenkins workspace...'
-            cleanWs()
+            echo '❌ Deployment failed. Check logs for details.'
         }
     }
 }
