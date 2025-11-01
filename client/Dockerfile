@@ -1,20 +1,13 @@
-# Sử dụng image Node.js nhẹ
-FROM node:18-slim
-
-# Set thư mục làm việc trong container
+# Build stage
+FROM node:18 AS builder
 WORKDIR /app
-
-# Copy package.json và package-lock.json để tận dụng cache
 COPY package*.json ./
-
-# Cài đặt dependencies
 RUN npm install
-
-# Copy toàn bộ source code
 COPY . .
+RUN npm run build
 
-# Mở port 5173 cho Vite dev server
-EXPOSE 5173
-
-# Lệnh chạy khi container khởi động
-CMD ["npm", "run", "dev", "--", "--host"]
+# Serve stage
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
