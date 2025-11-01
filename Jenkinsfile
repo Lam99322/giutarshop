@@ -49,7 +49,7 @@ pipeline {
             steps {
                 echo '🚀 Deploying application to VPS...'
                 script {
-                    sshagent(credentials: ['github-ssh']) { // ID của SSH key đã add trong Jenkins
+                    sshagent(credentials: ['vps-ssh']) { // ID của SSH key đã add trong Jenkins
                         sh """
                             ssh -o StrictHostKeyChecking=no ubuntu@${VPS_IP} << EOF
                                 set -e
