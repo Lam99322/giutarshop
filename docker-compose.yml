@@ -1,26 +1,31 @@
 version: "3.9"
 
 services:
-  backend:
-    build: ./server
-    container_name: backend
-    restart: always
-    ports:
-      - "5000:5000"
-    env_file:
-      - ./server/.env.production
-    command: npm start
-    networks:
-      - app-network
-
   frontend:
     build: ./client
     container_name: frontend
-    restart: always
     ports:
-      - "80:80"
+      - "5173:5173"   # map port dev server
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    command: npm run dev -- --host
     depends_on:
       - backend
+    networks:
+      - app-network
+
+  backend:
+    build: ./server
+    container_name: backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    command: npm start
+    env_file:
+      - ./server/.env.production
     networks:
       - app-network
 
